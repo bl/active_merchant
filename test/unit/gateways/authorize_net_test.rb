@@ -434,6 +434,18 @@ class AuthorizeNetTest < Test::Unit::TestCase
     assert_equal "6", response.params["response_reason_code"]
   end
 
+  def test_failed_authorize_with_multiple_messages
+    @gateway.expects(:ssl_post).returns(successful_store_response)
+    store = @gateway.store(@credit_card, @options)
+
+    @gateway.expects(:ssl_post).returns(failed_authorize_using_stored_card_response_with_multiple_messages)
+    response = @gateway.authorize(@amount, store.authorization)
+    assert_failure response
+    binding.pry
+    assert_equal "The credit card number is invalid.", response.message
+    assert_equal "6", response.params["response_reason_code"]
+  end
+
   def test_successful_capture
     @gateway.expects(:ssl_post).returns(successful_capture_response)
 
@@ -446,8 +458,20 @@ class AuthorizeNetTest < Test::Unit::TestCase
     @gateway.expects(:ssl_post).returns(failed_capture_response)
 
     assert capture = @gateway.capture(@amount, '2214269051#XXXX1234')
+    binding.pry
     assert_failure capture
   end
+
+  #def test_failed_capture_with_multiple_messages
+    #@gateway.expects(:ssl_post).returns(failed_capture_response_with_multiple_messages)
+
+    #assert capture = @gateway.capture(@amount, '2214269051#XXXX1234')
+    #binding.pry
+    #assert_failure response
+    #assert_equal "The credit card number is invalid.", response.message
+    #assert_equal "6", response.params["response_reason_code"]
+    #assert_failure capture
+  #end
 
   def test_failed_already_actioned_capture
     @gateway.expects(:ssl_post).returns(already_actioned_capture_response)
@@ -1592,6 +1616,43 @@ class AuthorizeNetTest < Test::Unit::TestCase
     eos
   end
 
+  def failed_capture_response_with_multiple_messages
+    <<-eos
+      <createTransactionResponse xmlns:xsi=
+                                 http://www.w3.org/2001/XMLSchema-instance xmlns:xsd=http://www.w3.org/2001/XMLSchema xmlns=AnetApi/xml/v1/schema/AnetApiSchema.xsd><refId/><messages>
+      <resultCode>Error</resultCode>
+      <message>
+        <code>E00104</code>
+        <text>Server is in maintenance.</text>
+      </message>
+      <message>
+        <code>E00001</code>
+        <text>An error occurred during processing. Please try again.</text>
+      </message>
+      </messages><transactionResponse>
+      <responseCode>3</responseCode>
+      <authCode/>
+      <avsResultCode>P</avsResultCode>
+      <cvvResultCode/>
+      <cavvResultCode/>
+      <transId>0</transId>
+      <refTransID>23124</refTransID>
+      <transHash>D99CC43D1B34F0DAB7F430F8F8B3249A</transHash>
+      <testRequest>0</testRequest>
+      <accountNumber/>
+      <accountType/>
+      <errors>
+        <error>
+          <errorCode>16</errorCode>
+          <errorText>The transaction cannot be found.</errorText>
+        </error>
+      </errors>
+      <shipTo/>
+      </transactionResponse>
+      </createTransactionResponse>
+    eos
+  end
+
   def successful_refund_response
     <<-eos
       <createTransactionResponse xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -1947,6 +2008,27 @@ class AuthorizeNetTest < Test::Unit::TestCase
           <message>
             <code>E00027</code>
             <text>The credit card number is invalid.</text>
+          </message>
+        </messages>
+        <directResponse>3,1,6,The credit card number is invalid.,,P,0,1,Store Purchase,1.01,CC,auth_only,f632442ce056f9f82ee9,Longbob,Longsen,,,,n/a,,,,,,,,,,,,,,,,,,,13BA28EEA3593C13E2E3BC109D16E5D2,,,,,,,,,,,,,XXXX1222,,,,,,,,,,,,,,,,,</directResponse>
+      </createCustomerProfileTransactionResponse>
+    eos
+  end
+
+  def failed_authorize_using_stored_card_response_with_multiple_messages
+    <<-eos
+      <?xml version="1.0" encoding="UTF-8"?>
+      <createCustomerProfileTransactionResponse xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <refId>1</refId>
+        <messages>
+          <resultCode>Error</resultCode>
+          <message>
+            <code>E00104</code>
+            <text>Server is in maintenance.</text>
+          </message>
+          <message>
+            <code>E00001</code>
+            <text>An error occurred during processing. Please try again.</text>
           </message>
         </messages>
         <directResponse>3,1,6,The credit card number is invalid.,,P,0,1,Store Purchase,1.01,CC,auth_only,f632442ce056f9f82ee9,Longbob,Longsen,,,,n/a,,,,,,,,,,,,,,,,,,,13BA28EEA3593C13E2E3BC109D16E5D2,,,,,,,,,,,,,XXXX1222,,,,,,,,,,,,,,,,,</directResponse>

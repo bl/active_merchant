@@ -757,6 +757,7 @@ module ActiveMerchant
 
         doc = Nokogiri::XML(body).remove_namespaces!
 
+        binding.pry
         if (element = doc.at_xpath("//messages/message"))
           response[:message_code] = element.at_xpath("code").content[/0*(\d+)$/, 1]
           response[:message_text] = element.at_xpath("text").content.chomp('.')
